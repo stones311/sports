@@ -1,13 +1,17 @@
 <!doctype html>
 <html lang="zh-Hant">
+  <!--網頁名稱-->
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SportSync｜運動場地即時查詢與揪團平台</title>
     <link rel="stylesheet" href="style.css" />
   </head>
+
+  <!--網頁內容-->
   <body>
     <div class="page">
+      <!-- 頂部導航欄 -->
       <header class="topbar">
         <div class="brand-group">
           <div class="brand">
@@ -16,6 +20,8 @@
           <div class="brand-divider"></div>
           <div class="brand-subtitle">運動場地即時查詢與揪團平台</div>
         </div>
+
+        <!--個人資訊頭像-->
         <button
           class="profile-button"
           id="profileButton"
@@ -38,35 +44,30 @@
             />
           </svg>
         </button>
-        <div class="profile-menu" id="profileMenu">
-          <button data-action="個人資料">👤　個人資料</button>
-          <button data-action="我的行程">🗓️　我的行程</button>
-          <button data-action="歷史紀錄">🕘　歷史紀錄</button>
-          <button data-action="活動聊天室">💬　活動聊天室</button>
-          <button data-action="通知設定">🔔　通知設定</button>
-          <button data-action="登出">↪　登出</button>
-        </div>
       </header>
 
+      <!-- 宣傳圖 -->
       <section class="hero">
         <div class="hero-copy">
           <h1>一起運動，<br /><span>讓生活更有活力！</span></h1>
-          <p>選擇喜愛的運動，或探索附近場地與即時揪團。</p>
+          <p>選擇喜愛的運動，或探索附近場地與即時揪團</p>
         </div>
         <div class="hero-note">運動不孤單！<br />一起更精彩！</div>
       </section>
 
+      <!-- 主要內容區塊 -->
       <main>
         <section class="sports-section">
+          <!-- 熱門運動Hot Sports -->
           <div class="section-heading">
             <div class="flame">♨</div>
             <h2>熱門運動</h2>
             <span class="en">Hot Sports</span>
-            <button class="view-all" data-action="全部運動">
-              查看全部 <span>→</span>
-            </button>
           </div>
+
+          <!-- 運動種類 -->
           <div class="sports-grid">
+            <!-- 籃球部分 -->
             <button
               class="sport-card"
               data-sport="籃球"
@@ -84,6 +85,8 @@
                 ><span class="arrow">→</span>
               </div>
             </button>
+
+            <!-- 羽球部分 -->
             <button
               class="sport-card"
               data-sport="羽球"
@@ -101,6 +104,8 @@
                 ><span class="arrow">→</span>
               </div>
             </button>
+
+            <!-- 排球部分 -->
             <button
               class="sport-card"
               data-sport="排球"
@@ -118,6 +123,8 @@
                 ><span class="arrow">→</span>
               </div>
             </button>
+
+            <!-- 其他運動部分 -->
             <button
               class="sport-card"
               data-sport="其他運動"
@@ -138,7 +145,9 @@
           </div>
         </section>
 
+        <!-- 平台其他功能 -->
         <section class="features-band" aria-label="平台主要功能">
+          <!--即時場地查詢區塊 -->
           <button class="feature-card" data-action="即時場地查詢">
             <span class="feature-icon">
               <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
@@ -152,11 +161,13 @@
             <span class="feature-copy"
               ><strong>即時場地查詢</strong
               ><small
-                >整合所有運動場地，查看附近場地、<br />位置、價格與可預約資訊。</small
+                >整合所有運動場地，查看附近場地、<br />位置、價格與可預約資訊</small
               ></span
             >
             <span class="feature-arrow">→</span>
           </button>
+
+          <!--即時揪團活動區塊 -->
           <button class="feature-card" data-action="即時揪團活動">
             <span class="feature-icon">
               <svg viewBox="0 0 48 48" fill="#0879b8" aria-hidden="true">
@@ -172,11 +183,13 @@
             <span class="feature-copy"
               ><strong>即時揪團活動</strong
               ><small
-                >瀏覽各類運動的揪團資訊，<br />查看時間、地點與剩餘名額。</small
+                >瀏覽各類運動的揪團資訊，<br />查看時間、地點與剩餘名額</small
               ></span
             >
             <span class="feature-arrow">→</span>
           </button>
+
+          <!--我的運動區塊 -->
           <button class="feature-card" data-action="我的運動">
             <span class="feature-icon">
               <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
@@ -209,18 +222,21 @@
             <span class="feature-copy"
               ><strong>我的運動</strong
               ><small
-                >管理行程、查看歷史紀錄，<br />並與團員保持聯繫。</small
+                >管理行程、查看歷史紀錄，<br />並與團員保持聯繫</small
               ></span
             >
             <span class="feature-arrow">→</span>
           </button>
         </section>
       </main>
+
+      <!-- 頁尾 -->
       <div class="footer-note">
-        SportSync © 2026　讓每一次運動，都更容易開始。
+        SportSync © 2026　讓每一次運動，都更容易開始
       </div>
     </div>
-    <div class="toast" id="toast" role="status"></div>
+
+    <!-- 引入JS檔案 -->
     <script src="script.js"></script>
   </body>
 </html>

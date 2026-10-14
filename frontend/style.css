@@ -1,15 +1,17 @@
-/* 固定畫布：不使用響應式斷點、不換行；縮放時以整張固定版面呈現 */
 * {
   box-sizing: border-box;
 }
+
 html,
 body {
   margin: 0;
   padding: 0;
 }
+
 html {
   overflow-x: auto;
 }
+
 body {
   min-width: 1536px;
   width: 1536px;
@@ -19,16 +21,19 @@ body {
   background: #f7fbff;
   overflow-x: visible;
 }
+
 button {
   font: inherit;
   cursor: pointer;
 }
+
 .page {
   width: 1536px;
   min-height: 1024px;
   overflow: hidden;
   background: #f8fcff;
 }
+
 .topbar {
   height: 72px;
   width: 1536px;
@@ -39,12 +44,14 @@ button {
   background: rgba(255, 255, 255, 0.97);
   border-bottom: 1px solid #e4eef7;
 }
+
 .brand-group {
   display: flex;
   align-items: center;
   gap: 28px;
   white-space: nowrap;
 }
+
 .brand {
   display: flex;
   align-items: center;
@@ -54,6 +61,7 @@ button {
   font-weight: 800;
   letter-spacing: -1px;
 }
+
 .brand-mark {
   width: 42px;
   height: 42px;
@@ -61,16 +69,19 @@ button {
   place-items: center;
   font-size: 34px;
 }
+
 .brand-divider {
   height: 28px;
   width: 1px;
   background: #c7dceb;
 }
+
 .brand-subtitle {
   font-size: 17px;
   color: #345b7d;
   letter-spacing: 1px;
 }
+
 .profile-button {
   width: 48px;
   height: 48px;
@@ -82,10 +93,12 @@ button {
   justify-content: center;
   gap: 7px;
 }
+
 .profile-button svg {
   width: 35px;
   height: 35px;
 }
+
 .hero {
   width: 1536px;
   height: 248px;
@@ -102,6 +115,7 @@ button {
       center 48% / cover no-repeat,
     linear-gradient(110deg, #e3f5ff, #a8d8f8);
 }
+
 .hero::before {
   content: "";
   position: absolute;
@@ -113,12 +127,14 @@ button {
   border-radius: 48% 52% 55% 45%;
   transform: rotate(25deg);
 }
+
 .hero-copy {
   position: absolute;
   left: 112px;
   top: 44px;
   width: 560px;
 }
+
 .hero h1 {
   margin: 0 0 14px;
   font-size: 44px;
@@ -127,9 +143,11 @@ button {
   letter-spacing: 2px;
   color: #0d4678;
 }
+
 .hero h1 span {
   color: #0787c9;
 }
+
 .hero p {
   margin: 0;
   font-size: 20px;
@@ -138,6 +156,7 @@ button {
   letter-spacing: 0.5px;
   white-space: nowrap;
 }
+
 .hero-note {
   position: absolute;
   left: 690px;
@@ -149,6 +168,7 @@ button {
   transform: rotate(-10deg);
   white-space: nowrap;
 }
+
 .hero-note::after {
   content: "";
   display: block;
@@ -159,17 +179,20 @@ button {
   transform: rotate(-9deg);
   border-radius: 3px;
 }
+
 .sports-section {
   width: 1536px;
   padding: 32px 64px 0;
   height: 464px;
 }
+
 .section-heading {
   display: flex;
   align-items: center;
   height: 54px;
   margin-bottom: 22px;
 }
+
 .flame {
   width: 48px;
   font-size: 39px;
@@ -177,6 +200,7 @@ button {
   color: #087fc2;
   line-height: 1;
 }
+
 .section-heading h2 {
   margin: 0;
   font-size: 30px;
@@ -184,33 +208,21 @@ button {
   font-weight: 800;
   white-space: nowrap;
 }
+
 .section-heading .en {
   margin-left: 16px;
   font-size: 18px;
   color: #426789;
   white-space: nowrap;
 }
-.view-all {
-  margin-left: auto;
-  border: 0;
-  background: transparent;
-  color: #087fc2;
-  font-weight: 700;
-  font-size: 15px;
-  padding: 10px 0 10px 18px;
-  white-space: nowrap;
-}
-.view-all span {
-  font-size: 23px;
-  vertical-align: -2px;
-  margin-left: 8px;
-}
+
 .sports-grid {
   width: 1408px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 22px;
 }
+
 .sport-card {
   height: 328px;
   border-radius: 13px;
@@ -222,10 +234,12 @@ button {
     transform 0.18s ease,
     box-shadow 0.18s ease;
 }
+
 .sport-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 10px 24px rgba(44, 105, 153, 0.2);
 }
+
 .sport-image {
   width: 100%;
   height: 234px;
@@ -233,6 +247,7 @@ button {
   object-fit: cover;
   background: #d8ebf8;
 }
+
 .sport-info {
   height: 94px;
   padding: 0 18px;
@@ -241,6 +256,7 @@ button {
   gap: 14px;
   white-space: nowrap;
 }
+
 .sport-emoji {
   width: 48px;
   height: 48px;
@@ -249,27 +265,32 @@ button {
   place-items: center;
   font-size: 34px;
 }
+
 .sport-label {
   flex: 1;
   min-width: 0;
 }
+
 .sport-label strong {
   display: block;
   font-size: 20px;
   line-height: 1.4;
   color: #123f6b;
 }
+
 .sport-label small {
   display: block;
   font-size: 15px;
   color: #3c6284;
   margin-top: 2px;
 }
+
 .arrow {
   font-size: 25px;
   color: #075f9e;
   margin-left: auto;
 }
+
 .features-band {
   width: 1408px;
   height: 164px;
@@ -281,6 +302,7 @@ button {
   background: linear-gradient(110deg, #eaf6ff, #f3faff);
   border-radius: 22px;
 }
+
 .feature-card {
   height: 128px;
   padding: 20px 22px;
@@ -294,10 +316,12 @@ button {
   color: inherit;
   box-shadow: 0 3px 10px rgba(60, 120, 165, 0.04);
 }
+
 .feature-card:hover {
   background: #fff;
   box-shadow: 0 7px 18px rgba(60, 120, 165, 0.13);
 }
+
 .feature-icon {
   width: 76px;
   height: 76px;
@@ -308,20 +332,24 @@ button {
   place-items: center;
   color: #0879b8;
 }
+
 .feature-icon svg {
   width: 38px;
   height: 38px;
 }
+
 .feature-copy {
   flex: 1;
   min-width: 0;
 }
+
 .feature-copy strong {
   display: block;
   font-size: 20px;
   margin-bottom: 8px;
   white-space: nowrap;
 }
+
 .feature-copy small {
   display: block;
   font-size: 14px;
@@ -329,64 +357,17 @@ button {
   color: #6684a2;
   white-space: nowrap;
 }
+
 .feature-arrow {
   font-size: 24px;
   color: #0782c6;
   margin-left: auto;
 }
+
 .footer-note {
   width: 1536px;
   text-align: center;
   padding: 0 0 18px;
   color: #8ca6bc;
   font-size: 12px;
-}
-.profile-menu {
-  display: none;
-  position: absolute;
-  z-index: 20;
-  right: 28px;
-  top: 62px;
-  width: 270px;
-  padding: 12px;
-  background: white;
-  border: 1px solid #dcebf6;
-  border-radius: 14px;
-  box-shadow: 0 12px 34px rgba(20, 65, 100, 0.2);
-}
-.profile-menu.open {
-  display: block;
-}
-.profile-menu button {
-  width: 100%;
-  padding: 13px 12px;
-  text-align: left;
-  border: 0;
-  border-radius: 9px;
-  color: #204e75;
-  background: white;
-  font-size: 15px;
-}
-.profile-menu button:hover {
-  background: #edf7ff;
-}
-.toast {
-  position: fixed;
-  z-index: 50;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #123f68;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 999px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  font-size: 14px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-  white-space: nowrap;
-}
-.toast.show {
-  opacity: 1;
 }
