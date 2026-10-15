@@ -1,17 +1,21 @@
+/* 套用網頁所有元素，計算寬高時自動調整邊框及內距 */
 * {
   box-sizing: border-box;
 }
 
+/* 清除瀏覽器預設的邊距白邊 */
 html,
 body {
   margin: 0;
   padding: 0;
 }
 
+/* 網頁內容超出螢幕時，自動顯示水平捲軸 */
 html {
   overflow-x: auto;
 }
 
+/* 網頁整體基本版面 */
 body {
   min-width: 1536px;
   width: 1536px;
@@ -19,7 +23,7 @@ body {
   font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
   color: #123f68;
   background: #f7fbff;
-  overflow-x: visible;
+  overflow-x: visible; /* 超出網頁的內容直接放生畫面外 */
 }
 
 button {
