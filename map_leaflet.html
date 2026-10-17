@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SportSync - 即時/場地查詢</title>
+    <!-- 載入 Leaflet 免費地圖 CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body { padding: 20px; background-color: #f8fbff; color: #1c1e21; }
+        
+        /* 頁首標題與 Logo 樣式 */
+        .header { margin-bottom: 16px; }
+        .title-container { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+        
+        .pin-logo-icon {
+            width: 38px;
+            height: 38px;
+            background-color: #e3f2fd;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .header h2 { color: #0d47a1; margin: 0; display: flex; align-items: center; gap: 8px; font-size: 24px; }
+        
+        /* 搜尋控制面板 - 三排佈局 */
+        .search-panel { 
+            background: white; 
+            padding: 16px 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06); 
+            margin-bottom: 16px; 
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .row-border { border-top: 1px solid #f0f0f0; padding-top: 10px; }
+        
+        select, input { 
+            padding: 8px 12px; 
+            border: 1px solid #ccc; 
+            border-radius: 8px; 
+            font-size: 14px; 
+            outline: none; 
+        }
+        select:focus, input:focus { border-color: #007aff; }
+        
+        /* 通用按鈕樣式 */
+        .btn { 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            color: white; 
+            transition: 0.2s;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .btn-success { background: #34c759; }
+        .btn-success:hover { background: #28a745; }
+
+        /* 放大版搜尋場地按鈕 */
+        .btn-search-large { 
+            background: #007aff; 
+            font-size: 15px;
+            padding: 10px 24px; 
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,122,255,0.25);
+        }
+        .btn-search-large:hover { background: #0056b3; }
+
+        .btn-group-right { margin-left: auto; display: flex; align-items: center; }
+
+        #map { height: 460px; width: 100%; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        
+        /* 運動場館列表卡片樣式 */
+        .venue-list-title { margin-bottom: 12px; color: #0d47a1; display: flex; justify-content: space-between; align-items: center; }
+        .venue-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .venue-card { 
+            background: white; 
+            border-radius: 12px; 
+            padding: 16px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); 
+            border-left: 5px solid #007aff; 
+            transition: transform 0.2s;
+        }
+        .venue-card:hover { transform: translateY(-3px); }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 6px; }
+        .badge-hot { background: #ffe0b2; color: #e65100; }
+        .badge-available { background: #e3f2fd; color: #1565c0; }
+        .badge-closed { background: #ffebee; color: #c62828; }
+        .price-tag { color: #d32f2f; font-weight: bold; font-size: 14px; }
+        
+        .btn-reserve { background: #007aff; color: #fff; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-top: 10px; width: 100%; font-weight: bold; }
+        .btn-reserve:hover { background: #0056b3; }
+        .btn-reserve:disabled { background: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="title-container">
+            <div class="pin-logo-icon">
+                <svg width="22" height="26" viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 0C5.37 0 0 5.37 0 12C0 21 12 28 12 28C12 28 24 21 24 12C24 5.37 18.63 0 12 0ZM12 16C9.79 16 8 14.21 8 12C8 9.79 9.79 8 12 8C14.21 8 16 9.79 16 12C16 14.21 14.21 16 12 16Z" fill="#0077C5"/>
+                </svg>
+            </div>
+            <h2>SportSync 即時/場地查詢</h2>
+        </div>
+        <p style="color: #666;">可指定日期查詢，或依當下真實營運時段動態判定目前開放狀況</p>
+    </div>
+
+    <!-- 搜尋與篩選控制面板 -->
+    <div class="search-panel">
+        <!-- 第一排：日期 + 時間，右上角放放大搜尋場地按鈕 -->
+        <div class="row">
+            <span style="font-weight: bold;">日期：</span>
+            <input type="date" id="datePicker" onchange="redrawCircleAndCourts()">
+
+            <span style="font-weight: bold; margin-left: 8px;">時間：</span>
+            <select id="timeSelect" onchange="redrawCircleAndCourts()">
+                <option value="即時" selected>即時 (目前開放中)</option>
+                <option value="不限">不限時間</option>
+                <option value="上午">上午 (06:00 - 12:00)</option>
+                <option value="下午">下午 (12:00 - 18:00)</option>
+                <option value="晚上">晚上 (18:00 - 22:00)</option>
+            </select>
+
+            <div class="btn-group-right">
+                <button class="btn btn-search-large" onclick="executeUnifiedSearch()">🔍 搜尋場地</button>
+            </div>
+        </div>
+
+        <!-- 第二排：地點 (縣市/區域/手動輸入 200px) + GPS 定位按鈕 + 範圍 -->
+        <div class="row row-border">
+            <span style="font-weight: bold;">地點：</span>
+            <select id="citySelect" onchange="updateDistrictSelect()">
+                <option value="">-- 縣市 --</option>
+                <option value="桃園市">桃園市</option>
+                <option value="台北市">台北市</option>
+                <option value="新北市">新北市</option>
+                <option value="台中市">台中市</option>
+                <option value="台南市">台南市</option>
+                <option value="高雄市">高雄市</option>
+            </select>
+            
+            <select id="districtSelect">
+                <option value="">-- 區域 --</option>
+            </select>
+
+            <span style="color: #aaa;">或</span>
+
+            <input type="text" id="manualInput" placeholder="路名或地名" style="width: 200px;" onkeydown="if(event.key==='Enter') executeUnifiedSearch()">
+
+            <button class="btn btn-success" style="margin-left: 8px;" onclick="searchByGPS()">📍 GPS 定位</button>
+
+            <span style="font-weight: bold; margin-left: 8px;">範圍：</span>
+            <select id="radiusSelect" onchange="redrawCircleAndCourts()">
+                <option value="1000" selected>1 公里</option>
+                <option value="3000">3 公里</option>
+                <option value="5000">5 公里</option>
+            </select>
+        </div>
+
+        <!-- 第三排：項目 + 場地 + 價格 -->
+        <div class="row row-border">
+            <span style="font-weight: bold;">項目：</span>
+            <select id="sportSelect" onchange="redrawCircleAndCourts()">
+                <option value="全部" selected>全部運動</option>
+                <option value="籃球">籃球</option>
+                <option value="羽球">羽球</option>
+                <option value="排球">排球</option>
+                <option value="其他運動">其他運動</option>
+            </select>
+
+            <span style="font-weight: bold; margin-left: 8px;">場地：</span>
+            <select id="envSelect" onchange="redrawCircleAndCourts()">
+                <option value="不限">不限</option>
+                <option value="室內">室內館</option>
+                <option value="室外">室外場</option>
+            </select>
+
+            <span style="font-weight: bold; margin-left: 8px;">價格：</span>
+            <select id="priceSelect" onchange="redrawCircleAndCourts()">
+                <option value="不限">不限</option>
+                <option value="免費">免費開放</option>
+                <option value="100以下">100元以下/hr</option>
+                <option value="100-300">100 - 300元/hr</option>
+                <option value="300以上">300元以上/hr</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 地圖容器 -->
+    <div id="map"></div>
+
+    <!-- 地區運動場館動態列表 -->
+    <div class="venue-list-title">
+        <h3 id="listHeading">📋 運動場館清單</h3>
+        <span id="venueCountText" style="font-size: 14px; color: #666;">共找到 0 個場館</span>
+    </div>
+    <div id="venueGrid" class="venue-grid">
+        <!-- JS 動態渲染場館卡片 -->
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        let map, searchCircle, userMarker;
+        let markers = [];
+        let currentCenter = [24.9380, 121.2882]; // 八德預設座標 [lat, lng]
+
+        const districtData = {
+            "桃園市": ["八德區", "桃園區", "中壢區", "龜山區", "平鎮區", "蘆竹區", "楊梅區", "大溪區"],
+            "台北市": ["信義區", "大安區", "中山區", "中正區", "松山區", "內湖區", "士林區", "文山區"],
+            "新北市": ["板橋區", "新莊區", "三重區", "中和區", "永和區", "新店區", "土城區", "淡水區"],
+            "台中市": ["西屯區", "北屯區", "南屯區", "北區", "西區", "東區", "中區", "豐原區"],
+            "台南市": ["永康區", "東區", "中西區", "安平區", "北區", "南區", "安南區"],
+            "高雄市": ["左營區", "三民區", "鳳山區", "前鎮區", "苓雅區", "鼓山區", "楠梓區"]
+        };
+
+        const realCourts = [
+            { id: 1, name: "八德國民運動中心", lat: 24.9380, lng: 121.2882, sport: "籃球", rating: "★ 4.8", address: "桃園市八德區廣福路230號", openHour: 6, closeHour: 22, timeText: "06:00 - 22:00", env: "室內", price: 200, priceText: "NT$ 200 / hr" },
+            { id: 2, name: "八德區青少年活動中心戶外籃球場", lat: 24.9332, lng: 121.2915, sport: "籃球", rating: "★ 4.4", address: "桃園市八德區興豐路2207號", openHour: 6, closeHour: 22, timeText: "06:00 - 22:00", env: "室外", price: 0, priceText: "免費開放" },
+            { id: 3, name: "八德微型運動中心", lat: 24.9285, lng: 121.2846, sport: "羽球", rating: "★ 4.5", address: "桃園市八德區豐德路458號", openHour: 8, closeHour: 22, timeText: "08:00 - 22:00", env: "室內", price: 280, priceText: "NT$ 280 / hr" },
+            { id: 4, name: "桃園市國民運動中心", lat: 24.9926, lng: 121.3142, sport: "羽球", rating: "★ 4.7", address: "桃園市桃園區中山東路233號", openHour: 6, closeHour: 22, timeText: "06:00 - 22:00", env: "室內", price: 350, priceText: "NT$ 350 / hr" },
+            { id: 5, name: "中壢國民運動中心", lat: 24.9583, lng: 121.2185, sport: "排球", rating: "★ 4.6", address: "桃園市中壢區三光路350號", openHour: 6, closeHour: 22, timeText: "06:00 - 22:00", env: "室內", price: 150, priceText: "NT$ 150 / hr" },
+            { id: 6, name: "信義運動中心", lat: 25.0330, lng: 121.5654, sport: "籃球", rating: "★ 4.6", address: "台北市信義區松勤街100號", openHour: 6, closeHour: 22, timeText: "06:00 - 22:00", env: "室內", price: 250, priceText: "NT$ 250 / hr" }
+        ];
+
+        function createCustomIcon(color) {
+            const svgIcon = `
+                <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12.5 0C5.6 0 0 5.6 0 12.5C0 21.9 12.5 41 12.5 41C12.5 41 25 21.9 25 12.5C25 5.6 19.4 0 12.5 0Z" fill="${color}" stroke="#ffffff" stroke-width="1.5"/>
+                    <circle cx="12.5" cy="12.5" r="5" fill="#ffffff"/>
+                </svg>`;
+            return L.divIcon({
+                className: '',
+                html: svgIcon,
+                iconSize: [25, 41],
+                iconAnchor: [12.5, 41],
+                popupAnchor: [0, -35]
+            });
+        }
+
+        const redCenterIcon = createCustomIcon('#e53935');
+        const blueCourtIcon = createCustomIcon('#007aff');
+
+        function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+        }
+
+        function isOpenNow(openHour, closeHour) {
+            const currentHour = new Date().getHours();
+            if (openHour === 0 && closeHour === 24) return true;
+            return currentHour >= openHour && currentHour < closeHour;
+        }
+
+        function initMap() {
+            // 設定日期選擇器：預設今天，並限制只能選擇今天至後天 (3天內)
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+
+            const maxDateObj = new Date();
+            maxDateObj.setDate(now.getDate() + 2); // 今天 + 明天 + 後天
+            const maxYear = maxDateObj.getFullYear();
+            const maxMonth = String(maxDateObj.getMonth() + 1).padStart(2, '0');
+            const maxDay = String(maxDateObj.getDate()).padStart(2, '0');
+            const maxDateStr = `${maxYear}-${maxMonth}-${maxDay}`;
+
+            const datePicker = document.getElementById('datePicker');
+            datePicker.value = todayStr;
+            datePicker.min = todayStr;
+            datePicker.max = maxDateStr;
+
+            map = L.map('map').setView(currentCenter, 14);
+
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 19
+            }).addTo(map);
+
+            map.on('click', function(e) {
+                currentCenter = [e.latlng.lat, e.latlng.lng];
+                redrawCircleAndCourts("點擊選取位置");
+            });
+
+            searchByGPS(true);
+        }
+
+        function updateDistrictSelect() {
+            const city = document.getElementById("citySelect").value;
+            const districtSelect = document.getElementById("districtSelect");
+            districtSelect.innerHTML = '<option value="">-- 區域 --</option>';
+
+            if (city && districtData[city]) {
+                districtData[city].forEach(dist => {
+                    const option = document.createElement("option");
+                    option.value = dist;
+                    option.textContent = dist;
+                    districtSelect.appendChild(option);
+                });
+            }
+        }
+
+        function executeUnifiedSearch() {
+            const city = document.getElementById("citySelect").value;
+            const district = document.getElementById("districtSelect").value;
+            const manualText = document.getElementById("manualInput").value.trim();
+
+            let searchText = "";
+            if (manualText) searchText = manualText;
+            else if (city && district) searchText = city + district;
+            else {
+                alert("請選擇「縣市與區域」或「輸入關鍵字」進行搜尋！");
+                return;
+            }
+
+            fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(searchText))
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        currentCenter = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                        map.flyTo(currentCenter, 14);
+                        redrawCircleAndCourts("搜尋位置：" + searchText);
+                    } else {
+                        alert("查無此地點，請再試試其他關鍵字。");
+                    }
+                })
+                .catch(() => alert("搜尋服務繁忙，請稍後重試。"));
+        }
+
+        function searchByGPS(isInitial = false) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        currentCenter = [position.coords.latitude, position.coords.longitude];
+                        map.flyTo(currentCenter, 14);
+                        redrawCircleAndCourts("📍 當前 GPS 定位");
+                    },
+                    (error) => {
+                        if (!isInitial) alert("無法存取當前 GPS 位置，已改用預設地點。");
+                        redrawCircleAndCourts("預設位置 (桃園八德)");
+                    }
+                );
+            } else {
+                if (!isInitial) alert("您的瀏覽器不支援 GPS 定位。");
+                redrawCircleAndCourts("預設位置");
+            }
+        }
+
+        function redrawCircleAndCourts(titleText) {
+            const selectedDate = document.getElementById("datePicker").value;
+            const radius = parseInt(document.getElementById("radiusSelect").value);
+            const selectedSport = document.getElementById("sportSelect").value;
+            const selectedTime = document.getElementById("timeSelect").value;
+            const selectedEnv = document.getElementById("envSelect").value;
+            const selectedPrice = document.getElementById("priceSelect").value;
+
+            if (searchCircle) map.removeLayer(searchCircle);
+            if (userMarker) map.removeLayer(userMarker);
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+
+            userMarker = L.marker(currentCenter, { icon: redCenterIcon }).addTo(map)
+                .bindPopup(`<b>📍 ${titleText || '查詢中心'}</b><br><small>查詢日期：${selectedDate}</small>`).openPopup();
+
+            searchCircle = L.circle(currentCenter, {
+                color: '#007aff',
+                fillColor: '#007aff',
+                fillOpacity: 0.12,
+                radius: radius
+            }).addTo(map);
+
+            const filteredCourts = realCourts.filter(court => {
+                const distance = getDistanceInMeters(currentCenter[0], currentCenter[1], court.lat, court.lng);
+                const isInRadius = distance <= radius;
+
+                const matchSport = (selectedSport === "全部") || 
+                                   (selectedSport === "其他運動" ? !["籃球","羽球","排球"].includes(court.sport) : court.sport === selectedSport);
+                
+                let matchTime = true;
+                if (selectedTime === "即時") {
+                    matchTime = isOpenNow(court.openHour, court.closeHour);
+                } else if (selectedTime === "上午") {
+                    matchTime = court.openHour <= 12 && court.closeHour >= 6;
+                } else if (selectedTime === "下午") {
+                    matchTime = court.openHour <= 18 && court.closeHour >= 12;
+                } else if (selectedTime === "晚上") {
+                    matchTime = court.openHour <= 22 && court.closeHour >= 18;
+                }
+
+                const matchEnv = (selectedEnv === "不限") || court.env === selectedEnv;
+                
+                let matchPrice = true;
+                if (selectedPrice === "免費") matchPrice = court.price === 0;
+                else if (selectedPrice === "100以下") matchPrice = court.price > 0 && court.price <= 100;
+                else if (selectedPrice === "100-300") matchPrice = court.price >= 100 && court.price <= 300;
+                else if (selectedPrice === "300以上") matchPrice = court.price >= 300;
+
+                return isInRadius && matchSport && matchTime && matchEnv && matchPrice;
+            });
+
+            filteredCourts.forEach(court => {
+                const openState = isOpenNow(court.openHour, court.closeHour);
+                const marker = L.marker([court.lat, court.lng], { icon: blueCourtIcon }).addTo(map);
+
+                marker.bindPopup(`
+                    <div style="padding: 4px; min-width: 180px;">
+                        <h3 style="margin-bottom:4px; color:#0d47a1; font-size:15px;">${court.name}</h3>
+                        <p style="font-size:12px; color:#666;">📍 ${court.address}</p>
+                        <p style="font-size:12px; color:#333; margin-top:4px;">
+                            <b>${court.sport}</b> (${court.env}) | 狀態：<b style="color:${openState?'#2e7d32':'#c62828'}">${openState?'開放中':'已打烊'}</b>
+                        </p>
+                        <p style="font-size:12px; color:#555; margin-top:2px;">營運時間：${court.timeText}</p>
+                        <p style="font-size:12px; color:#d32f2f; margin-top:2px;"><b>收費：${court.priceText}</b></p>
+                        <button class="btn-reserve" ${!openState?'disabled':''} onclick="alert('查看 ${court.name} 於 ${selectedDate} 的揪團')">
+                            ${openState?'查看即時揪團':'非營運時段'}
+                        </button>
+                    </div>
+                `);
+
+                markers.push(marker);
+            });
+
+            renderVenueList(filteredCourts, titleText, selectedDate);
+        }
+
+        function renderVenueList(courts, titleText, selectedDate) {
+            const venueGrid = document.getElementById("venueGrid");
+            const venueCountText = document.getElementById("venueCountText");
+            const listHeading = document.getElementById("listHeading");
+
+            listHeading.textContent = `📋 運動場館清單 (${titleText || '目前區域'} - ${selectedDate})`;
+            venueCountText.textContent = `共找到 ${courts.length} 個符合條件的場館`;
+            venueGrid.innerHTML = "";
+
+            if (courts.length === 0) {
+                venueGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 30px; color: #888;">半徑範圍內查無符合時段與篩選條件的運動場館。</div>`;
+                return;
+            }
+
+            courts.forEach(court => {
+                const openState = isOpenNow(court.openHour, court.closeHour);
+                let badgeClass = openState ? "badge-available" : "badge-closed";
+                let statusText = openState ? (court.status || "開放中") : "已打烊";
+
+                const card = document.createElement("div");
+                card.className = "venue-card";
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <h4 style="color: #0d47a1; font-size: 16px;">${court.name}</h4>
+                        <span class="badge ${badgeClass}">${statusText}</span>
+                    </div>
+                    <p style="font-size: 13px; color: #666; margin-top: 6px;">📍 ${court.address}</p>
+                    <p style="font-size: 13px; color: #333; margin-top: 6px;">
+                        項目：<b>${court.sport}</b> (${court.env}) | 評分：<span style="color: #f39c12; font-weight: bold;">${court.rating}</span>
+                    </p>
+                    <p style="font-size: 13px; margin-top: 4px;">
+                        費用：<span class="price-tag">${court.priceText}</span>
+                    </p>
+                    <p style="font-size: 12px; color: #555; margin-top: 4px;">營運時間：<b>${court.timeText}</b></p>
+                    <button class="btn-reserve" ${!openState?'disabled':''} onclick="alert('導向 ${court.name} 於 ${selectedDate} 的揪團頁面')">
+                        ${openState ? '預約 / 查看揪團' : '目前非營運時間'}
+                    </button>
+                `;
+                venueGrid.appendChild(card);
+            });
+        }
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
