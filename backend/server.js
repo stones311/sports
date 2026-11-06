@@ -1,3 +1,4 @@
+require("dotenv").config(); // 務必加上這行來讀取 .env 檔案！
 const express = require("express");
 const line = require("@line/bot-sdk");
 const { getEvent, updateEvent } = require("./database");
