@@ -115,7 +115,7 @@ function generateFlexMessage(eventData, viewerUserId) {
           {
             type: "button",
             style: "secondary",
-            color: isHost ? "#FF5555" : "#AAAAAA", // 揪團者按鈕用紅色系，一般報名者用灰色系
+            color: isHost ? "#FF5555" : "#AAAAAA", // 揪團者按鈕用紅色，其他人用灰色
             action: {
               type: "postback",
               label: bottomButtonLabel, // 動態顯示「取消揪團」或「取消報名」
