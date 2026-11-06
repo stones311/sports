@@ -1,9 +1,18 @@
 const express = require("express");
+const line = require("@line/bot-sdk");
 const { getEvent, updateEvent } = require("./database");
 const { generateFlexMessage } = require("./linebot");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// LINE Bot 設定金鑰（從環境變數讀取）
+const config = {
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_CHANNEL_SECRET,
+};
+
+const client = new line.Client(config);
 
 // 解析 LINE 傳遞的 JSON 格式資料
 app.use(express.json());
@@ -56,16 +65,31 @@ app.post("/webhook", async function (req, res) {
           if (userId === eventData.hostId) {
             eventData.statusText = "取消活動";
             eventData.statusColor = "#808080"; // 灰字
-            // 可以在這裡串接 LINE API 發送廣播通知所有人活動已取消
           }
         }
 
         // 寫入資料庫更新
         updateEvent(eventId, eventData);
 
-        // 產生更新後的 Flex Message (此處可透過 LINE Messaging API 回覆給使用者)
+        // 產生更新後的 Flex Message 卡片
         const updatedFlex = generateFlexMessage(eventData, userId);
-        console.log("更新後的卡片結構：", JSON.stringify(updatedFlex, null, 2));
+
+        // 透過 LINE Messaging API 將更新後的卡片即時回覆給使用者
+        try {
+          await client.replyMessage(event.replyToken, [
+            {
+              type: "flex",
+              altText: updatedFlex.altText,
+              contents: updatedFlex.contents,
+            },
+          ]);
+          console.log("成功將更新後的卡片回傳給 LINE！");
+        } catch (error) {
+          console.error(
+            "回傳 LINE 失敗：",
+            error.originalError?.response?.data || error,
+          );
+        }
       }
     }
   }
