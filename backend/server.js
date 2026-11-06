@@ -1,20 +1,75 @@
 const express = require("express");
-const app = express();
+const { getEvent, updateEvent } = require("./database");
+const { generateFlexMessage } = require("./linebot");
 
-// 讓 Render 自動決定要用哪個 Port，如果沒有就預設用 3000
+const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 【重要】加上這一行來解析 LINE 傳過來的 JSON 格式資料
+// 解析 LINE 傳遞的 JSON 格式資料
 app.use(express.json());
 
-// 確認後端是否正常運作的文字
+// 測試後端是否正常運作
 app.get("/", function (req, res) {
-  res.send("Backend is running!");
+  res.send("SportSync Backend is running!");
 });
 
-// 接收 LINE Webhook 驗證與事件的路由
-app.post("/webhook", function (req, res) {
-  // 回傳 200 OK 告訴 LINE 伺服器接收成功
+// 接收 LINE Webhook 事件（處理報名、取消報名、取消揪團）
+app.post("/webhook", async function (req, res) {
+  const events = req.body.events;
+
+  if (events && events.length > 0) {
+    for (const event of events) {
+      if (event.type === "postback") {
+        const params = new URLSearchParams(event.postback.data);
+        const action = params.get("action");
+        const eventId = params.get("eventId");
+        const userId = event.source.userId;
+
+        let eventData = getEvent(eventId);
+        if (!eventData) continue;
+
+        // 1. 我要報名邏輯
+        if (action === "signup") {
+          if (eventData.currentCount < eventData.maxCount) {
+            eventData.currentCount += 1;
+            // 若人數剛好達到上限 ➔ 轉為紅字「截止報名」
+            if (eventData.currentCount === eventData.maxCount) {
+              eventData.statusText = "截止報名";
+              eventData.statusColor = "#FF0000"; // 紅字
+            }
+          }
+        }
+        // 2. 取消報名邏輯
+        else if (action === "cancel_signup") {
+          if (eventData.currentCount > 0) {
+            eventData.currentCount -= 1;
+
+            // 如果原本是「截止報名」，釋出名額後變成藍字「加碼報名」
+            if (eventData.statusText === "截止報名") {
+              eventData.statusText = "加碼報名";
+              eventData.statusColor = "#0088FF"; // 藍字
+            }
+          }
+        }
+        // 3. 揪團者取消揪團邏輯
+        else if (action === "cancel_event") {
+          if (userId === eventData.hostId) {
+            eventData.statusText = "取消活動";
+            eventData.statusColor = "#808080"; // 灰字
+            // 可以在這裡串接 LINE API 發送廣播通知所有人活動已取消
+          }
+        }
+
+        // 寫入資料庫更新
+        updateEvent(eventId, eventData);
+
+        // 產生更新後的 Flex Message (此處可透過 LINE Messaging API 回覆給使用者)
+        const updatedFlex = generateFlexMessage(eventData, userId);
+        console.log("更新後的卡片結構：", JSON.stringify(updatedFlex, null, 2));
+      }
+    }
+  }
+
   res.status(200).send("OK");
 });
 
