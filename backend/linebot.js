@@ -1,10 +1,23 @@
 /**
- * 產生「發起揪團」的設定/預覽 Flex Message 卡片（純發起用，無報名、無人數）
+ * 產生「發起揪團」的設定/預覽 Flex Message 卡片
+ * @param {Object} eventData 活動設定物件
  */
-function generateFlexMessage() {
+function generateCreateEventFlex(eventData = {}) {
+  // 預設值（當尚未選擇時的顯示文字）
+  const emoji = eventData.emoji || "🏀";
+  const city = eventData.city || "台北市";
+  const sport = eventData.sport || "籃球";
+  const dateStr = eventData.dateStr || "2026/03/15";
+  const weekday = eventData.weekday || "日";
+  const startTime = eventData.startTime || "14:00";
+  const endTime = eventData.endTime || "16:00";
+  const locationName = eventData.locationName || "新北市新莊國民運動中心";
+  const mapUrl = eventData.mapUrl || "https://maps.google.com";
+  const hostName = eventData.hostName || "小幫手";
+
   return {
     type: "flex",
-    altText: "【建立揪團】請設定您的運動揪團資訊",
+    altText: `【建立揪團】${emoji}${city}${sport}團`,
     contents: {
       type: "bubble",
       header: {
@@ -13,7 +26,7 @@ function generateFlexMessage() {
         contents: [
           {
             type: "text",
-            text: "📢 建立新揪團",
+            text: `${emoji}${city}${sport}團`,
             weight: "bold",
             color: "#ffffff",
             size: "md",
@@ -21,8 +34,8 @@ function generateFlexMessage() {
           },
           {
             type: "text",
-            text: "設定中",
-            color: "#FFA500", // 橘色代表草稿/設定中
+            text: "建立中",
+            color: "#FFA500",
             align: "end",
             weight: "bold",
             size: "sm",
@@ -37,29 +50,35 @@ function generateFlexMessage() {
         contents: [
           {
             type: "text",
-            text: "運動類型：🏀 籃球 / 🏸 羽球 ...",
-            color: "#aaaaaa",
+            text: `日期：${dateStr} (${weekday}) ${startTime} ~ ${endTime}`,
+            color: "#ffffff",
             size: "sm",
+            wrap: true,
           },
           {
             type: "text",
-            text: "活動時間：請選擇日期與時間",
-            color: "#aaaaaa",
-            size: "sm",
-            margin: "sm",
-          },
-          {
-            type: "text",
-            text: "活動地點：請選擇運動場地",
-            color: "#aaaaaa",
+            text: `地點：${locationName}`,
+            color: "#ffffff",
             size: "sm",
             margin: "sm",
             wrap: true,
           },
           {
+            type: "button",
+            style: "link",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "🗺️ 點擊開啟 Google Maps 地圖選擇",
+              uri: mapUrl,
+            },
+            color: "#4A90E2",
+            margin: "xs",
+          },
+          {
             type: "text",
-            text: "人數上限：預設 8 人",
-            color: "#aaaaaa",
+            text: `揪團者：${hostName}`,
+            color: "#ffffff",
             size: "sm",
             margin: "sm",
           },
@@ -77,7 +96,7 @@ function generateFlexMessage() {
             action: {
               type: "postback",
               label: "確認送出並建立揪團",
-              data: "action=confirm_create_event",
+              data: "action=confirm_create",
             },
           },
         ],
@@ -88,5 +107,5 @@ function generateFlexMessage() {
 }
 
 module.exports = {
-  generateFlexMessage,
+  generateCreateEventFlex,
 };

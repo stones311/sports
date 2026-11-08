@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const { messagingApi } = require("@line/bot-sdk");
-const { generateCreateEventFlex } = require("./linebot"); // 假設你有一個專門產生建立卡片的函式
+const { generateCreateEventFlex } = require("./linebot");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,15 +38,26 @@ app.post("/webhook", async function (req, res) {
         const userText = event.message.text;
 
         if (userText === "我要揪團") {
-          // 產生一張「純揪團建立/設定」的 Flex 訊息（沒有報名按鈕、沒有人數）
-          const createFlexMessage = generateCreateEventFlex();
+          // 產生符合新排版要求的建立揪團卡片
+          const createFlexMessage = generateCreateEventFlex({
+            emoji: "🏀",
+            city: "台北市",
+            sport: "籃球",
+            dateStr: "2026/03/15",
+            weekday: "日",
+            startTime: "14:00",
+            endTime: "16:00",
+            locationName: "新北市新莊國民運動中心",
+            mapUrl: "https://maps.google.com/?q=新北市新莊國民運動中心",
+            hostName: "揪團主辦人",
+          });
 
           try {
             await client.replyMessage({
               replyToken: event.replyToken,
               messages: [createFlexMessage],
             });
-            console.log("成功發送揪團建立卡片！");
+            console.log("成功發送新版揪團建立卡片！");
           } catch (error) {
             console.error("LINE 發送失敗：", error.message);
             if (error.body)
@@ -55,17 +66,16 @@ app.post("/webhook", async function (req, res) {
         }
       }
 
-      // 如果未來有揪團設定完成的 postback（例如點擊「確認發起」按鈕）
+      // 當使用者點擊「確認送出並建立揪團」
       if (event.type === "postback") {
         const params = new URLSearchParams(event.postback.data);
         const action = params.get("action");
 
         if (action === "confirm_create") {
-          // 這裡可以處理把揪團資料正式寫入資料庫的邏輯
           try {
             await client.replyMessage({
               replyToken: event.replyToken,
-              messages: [{ type: "text", text: "🎉 揪團建立成功！" }],
+              messages: [{ type: "text", text: "🎉 您的揪團已成功建立！" }],
             });
           } catch (error) {
             console.error("回覆失敗：", error.message);
