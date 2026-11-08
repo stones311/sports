@@ -1,25 +1,10 @@
 /**
- * 產生揪團的 Flex Message 卡片
- * @param {Object} eventData 活動物件
- * @param {String} viewerUserId 正在檢視卡片的使用者 LINE UID
+ * 產生「發起揪團」的設定/預覽 Flex Message 卡片（純發起用，無報名、無人數）
  */
-function generateFlexMessage(eventData, viewerUserId) {
-  // 1. 判斷檢視者身分：是否為揪團者 (Host)
-  const isHost = viewerUserId === eventData.hostId;
-
-  // 2. 決定底部按鈕行為：揪團者看「取消揪團」，報名者看「取消報名」
-  let bottomButtonLabel = isHost ? "取消揪團" : "取消報名";
-  let bottomAction = isHost ? "cancel_event" : "cancel_signup";
-
-  // 如果活動已經取消，底部按鈕顯示已取消
-  if (eventData.statusText === "取消活動") {
-    bottomButtonLabel = "活動已取消";
-    bottomAction = "none";
-  }
-
+function generateFlexMessage() {
   return {
     type: "flex",
-    altText: `【揪團】${eventData.sportEmoji} ${eventData.title} 開放報名中！`,
+    altText: "【建立揪團】請設定您的運動揪團資訊",
     contents: {
       type: "bubble",
       header: {
@@ -28,7 +13,7 @@ function generateFlexMessage(eventData, viewerUserId) {
         contents: [
           {
             type: "text",
-            text: `${eventData.sportEmoji} ${eventData.title}`,
+            text: "📢 建立新揪團",
             weight: "bold",
             color: "#ffffff",
             size: "md",
@@ -36,8 +21,8 @@ function generateFlexMessage(eventData, viewerUserId) {
           },
           {
             type: "text",
-            text: eventData.statusText, // 開放報名 / 截止報名 / 加碼報名 / 取消活動
-            color: eventData.statusColor, // 依狀態變動的顏色（綠/紅/藍/灰）
+            text: "設定中",
+            color: "#FFA500", // 橘色代表草稿/設定中
             align: "end",
             weight: "bold",
             size: "sm",
@@ -52,30 +37,31 @@ function generateFlexMessage(eventData, viewerUserId) {
         contents: [
           {
             type: "text",
-            text: `日期：${eventData.date}`,
-            color: "#ffffff",
+            text: "運動類型：🏀 籃球 / 🏸 羽球 ...",
+            color: "#aaaaaa",
             size: "sm",
           },
           {
             type: "text",
-            text: `地點：${eventData.location}`,
-            color: "#ffffff",
+            text: "活動時間：請選擇日期與時間",
+            color: "#aaaaaa",
             size: "sm",
+            margin: "sm",
+          },
+          {
+            type: "text",
+            text: "活動地點：請選擇運動場地",
+            color: "#aaaaaa",
+            size: "sm",
+            margin: "sm",
             wrap: true,
           },
           {
             type: "text",
-            text: `揪團者：${eventData.hostName}`,
-            color: "#ffffff",
+            text: "人數上限：預設 8 人",
+            color: "#aaaaaa",
             size: "sm",
-          },
-          {
-            type: "text",
-            text: `目前報名 ${eventData.currentCount} / ${eventData.maxCount} 人`,
-            color: "#00FF00",
-            size: "md",
-            weight: "bold",
-            margin: "md",
+            margin: "sm",
           },
         ],
         backgroundColor: "#111111",
@@ -85,43 +71,14 @@ function generateFlexMessage(eventData, viewerUserId) {
         layout: "vertical",
         contents: [
           {
-            type: "box",
-            layout: "horizontal",
-            spacing: "sm",
-            contents: [
-              {
-                type: "button",
-                style: "primary",
-                action: {
-                  type: "postback",
-                  label:
-                    eventData.statusText === "截止報名"
-                      ? "額滿排候補"
-                      : "我要報名",
-                  data: `action=signup&eventId=${eventData.id}`,
-                },
-              },
-              {
-                type: "button",
-                style: "secondary",
-                action: {
-                  type: "postback",
-                  label: "查看名單",
-                  data: `action=view_list&eventId=${eventData.id}`,
-                },
-              },
-            ],
-          },
-          {
             type: "button",
-            style: "secondary",
-            color: isHost ? "#FF5555" : "#AAAAAA", // 揪團者按鈕用紅色，其他人用灰色
+            style: "primary",
+            color: "#1DB446", // LINE 綠色
             action: {
               type: "postback",
-              label: bottomButtonLabel, // 動態顯示「取消揪團」或「取消報名」
-              data: `action=${bottomAction}&eventId=${eventData.id}`,
+              label: "確認送出並建立揪團",
+              data: "action=confirm_create_event",
             },
-            margin: "md",
           },
         ],
         backgroundColor: "#111111",

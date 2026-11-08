@@ -3,5 +3,12 @@
     "@line/bot-sdk": "^11.4.0",
     "dotenv": "^18.0.8",
     "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.7"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "concurrently \"node server.js\" \"ngrok http --domain=composed-afford-uncharted.ngrok-free.dev 3000\""
   }
 }
