@@ -1,7 +1,20 @@
 require("dotenv").config();
 const express = require("express");
+const axios = require("axios");
 const { messagingApi } = require("@line/bot-sdk");
-const { generateCreateEventFlex } = require("./linebot");
+const {
+  generateSportChoiceMessage,
+  generateDatePickerMessage,
+  generateTimePickerMessage,
+  generateLocationRequestMessage,
+  generateNearbyLocationsMessage,
+  generateHostChoiceMessage,
+  generateTensDigitMessage,
+  generateUnitsDigitMessage,
+  generateConfirmTotalMessage,
+  generateCurrentCountMessage,
+  generateCreateEventFlex,
+} = require("./linebot");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +30,8 @@ const client = new messagingApi.MessagingApiClient({
 
 app.use(express.json());
 
+const userSessions = {};
+
 app.get("/", function (req, res) {
   res.send("SportSync Backend is running!");
 });
@@ -25,7 +40,6 @@ app.get("/webhook", function (req, res) {
   res.status(200).send("Webhook Verified Successfully!");
 });
 
-// 接收 LINE Webhook 事件
 app.post("/webhook", async function (req, res) {
   const events = req.body.events;
 
@@ -33,52 +47,233 @@ app.post("/webhook", async function (req, res) {
     for (const event of events) {
       const userId = event.source.userId;
 
-      // 當使用者點擊圖文選單的「我要揪團」
       if (event.type === "message" && event.message.type === "text") {
         const userText = event.message.text;
 
         if (userText === "我要揪團") {
-          // 產生符合新排版要求的建立揪團卡片
-          const createFlexMessage = generateCreateEventFlex({
-            emoji: "🏀",
-            city: "台北市",
-            sport: "籃球",
-            dateStr: "2026/03/15",
-            weekday: "日",
-            startTime: "14:00",
-            endTime: "16:00",
-            locationName: "新北市新莊國民運動中心",
-            mapUrl: "https://maps.google.com/?q=新北市新莊國民運動中心",
-            hostName: "揪團主辦人",
+          userSessions[userId] = { step: "select_sport" };
+          const msg = generateSportChoiceMessage();
+          await client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [msg],
           });
+        } else if (userText.startsWith("我要揪團 運動:")) {
+          const sport = userText.split("運動:")[1];
+          userSessions[userId] = { step: "select_date", sport };
+          const msg = generateDatePickerMessage(sport);
+          await client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [msg],
+          });
+        } else if (userText.startsWith("選擇場地 ")) {
+          const locationName = userText.replace("選擇場地 ", "");
+          const session = userSessions[userId];
+          if (session) {
+            session.locationName = locationName;
+            session.step = "select_host_region";
 
-          try {
+            const msg = generateHostChoiceMessage(locationName);
             await client.replyMessage({
               replyToken: event.replyToken,
-              messages: [createFlexMessage],
+              messages: [msg],
             });
-            console.log("成功發送新版揪團建立卡片！");
-          } catch (error) {
-            console.error("LINE 發送失敗：", error.message);
-            if (error.body)
-              console.error("詳細原因：", JSON.stringify(error.body));
           }
         }
-      }
+        // 接收地區身分，進入「選擇十位數」
+        else if (userText.startsWith("設定地區 ")) {
+          const session = userSessions[userId];
+          if (session && session.step === "select_host_region") {
+            session.regionLabel = userText.replace("設定地區 ", "");
+            session.step = "select_tens_digit";
 
-      // 當使用者點擊「確認送出並建立揪團」
-      if (event.type === "postback") {
-        const params = new URLSearchParams(event.postback.data);
-        const action = params.get("action");
-
-        if (action === "confirm_create") {
-          try {
+            const msg = generateTensDigitMessage();
             await client.replyMessage({
               replyToken: event.replyToken,
-              messages: [{ type: "text", text: "🎉 您的揪團已成功建立！" }],
+              messages: [msg],
+            });
+          }
+        }
+        // 接收十位數，進入「選擇個位數」
+        else if (userText.startsWith("十位數 ")) {
+          const session = userSessions[userId];
+          if (session && session.step === "select_tens_digit") {
+            session.tempTens = parseInt(userText.replace("十位數 ", ""));
+            session.step = "select_units_digit";
+
+            const msg = generateUnitsDigitMessage(session.tempTens);
+            await client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [msg],
+            });
+          }
+        }
+        // 接收個位數，組合並讓使用者確認
+        else if (userText.startsWith("個位數 ")) {
+          const session = userSessions[userId];
+          if (session && session.step === "select_units_digit") {
+            const units = parseInt(userText.replace("個位數 ", ""));
+            session.totalCapacity = session.tempTens * 10 + units;
+
+            if (session.totalCapacity <= 0) session.totalCapacity = 4; // 防呆預設
+
+            session.step = "confirm_total";
+
+            const msg = generateConfirmTotalMessage(session.totalCapacity);
+            await client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [msg],
+            });
+          }
+        }
+        // 確認總人數結果
+        else if (userText === "確認總人數 正確") {
+          const session = userSessions[userId];
+          if (session && session.step === "confirm_total") {
+            session.step = "select_current_count";
+
+            const msg = generateCurrentCountMessage(session.totalCapacity);
+            await client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [msg],
+            });
+          }
+        } else if (userText === "重新選擇總人數") {
+          const session = userSessions[userId];
+          if (session) {
+            session.step = "select_tens_digit";
+            const msg = generateTensDigitMessage();
+            await client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [msg],
+            });
+          }
+        }
+        // 接收目前已有幾位，完成所有流程並產生成立卡片
+        else if (userText.startsWith("目前人數 ")) {
+          const session = userSessions[userId];
+          if (session && session.step === "select_current_count") {
+            session.currentCount = parseInt(userText.replace("目前人數 ", ""));
+
+            const emojiMap = {
+              羽球: "🏸",
+              籃球: "🏀",
+              排球: "🏐",
+              足球: "⚽",
+              網球: "🎾",
+            };
+            const emoji = emojiMap[session.sport] || "🏸";
+
+            const flexCard = generateCreateEventFlex({
+              emoji,
+              sport: session.sport,
+              dateStr: session.dateStr,
+              timeStr: session.timeStr,
+              locationName: session.locationName,
+              regionLabel: session.regionLabel,
+              totalCapacity: session.totalCapacity,
+              currentCount: session.currentCount,
+            });
+
+            delete userSessions[userId];
+
+            await client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [flexCard],
+            });
+          }
+        }
+      } else if (event.type === "postback") {
+        const data = event.postback.data;
+
+        if (data.startsWith("action=select_date")) {
+          const params = new URLSearchParams(data);
+          const sport = params.get("sport");
+          const selectedDate = event.postback.params.date;
+          const formattedDate = selectedDate.replace(/-/g, "/");
+
+          userSessions[userId] = {
+            step: "select_time",
+            sport,
+            dateStr: formattedDate,
+          };
+
+          const timeMsg = generateTimePickerMessage(sport, formattedDate);
+          await client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [timeMsg],
+          });
+        } else if (data.startsWith("action=select_time")) {
+          const params = new URLSearchParams(data);
+          const sport = params.get("sport");
+          const dateStr = params.get("date");
+          const selectedTime = event.postback.params.time;
+
+          const session = userSessions[userId] || {};
+          session.sport = sport;
+          session.dateStr = dateStr;
+          session.timeStr = selectedTime;
+          session.step = "get_location";
+          userSessions[userId] = session;
+
+          const locMsg = generateLocationRequestMessage(
+            sport,
+            dateStr,
+            selectedTime,
+          );
+          await client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [locMsg],
+          });
+        }
+      } else if (
+        event.type === "message" &&
+        event.message.type === "location"
+      ) {
+        const session = userSessions[userId];
+        if (session && session.step === "get_location") {
+          const lat = event.message.latitude;
+          const lng = event.message.longitude;
+          const sport = session.sport;
+
+          try {
+            const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+            const keyword = `${sport}場`;
+            const mapsUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=5000&keyword=${encodeURIComponent(keyword)}&key=${apiKey}`;
+
+            const response = await axios.get(mapsUrl);
+            const results = response.data.results;
+
+            let venues = [];
+            if (results && results.length > 0) {
+              venues = results.map((item) => ({ name: item.name }));
+            } else {
+              const fallbackUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=8000&keyword=${encodeURIComponent("運動中心")}&key=${apiKey}`;
+              const fallbackRes = await axios.get(fallbackUrl);
+              venues = fallbackRes.data.results.map((item) => ({
+                name: item.name,
+              }));
+            }
+
+            if (venues.length === 0) {
+              venues = [{ name: "附近運動中心" }];
+            }
+
+            const msg = generateNearbyLocationsMessage(venues);
+            await client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [msg],
             });
           } catch (error) {
-            console.error("回覆失敗：", error.message);
+            console.error("Google Maps API 查詢失敗：", error.message);
+            await client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [
+                {
+                  type: "text",
+                  text: "抱歉，尋找附近場地時發生錯誤，請直接手動輸入場地名稱：",
+                },
+              ],
+            });
           }
         }
       }
