@@ -191,7 +191,7 @@ function generateHostChoiceMessage(locationName) {
 }
 
 /**
- * 步驟七-1：選擇總需求人數【十位數】（限制為 0 或 1，對應 0~9 或 10~19 人）
+ * 步驟七-1：選擇總需求人數【十位數】
  */
 function generateTensDigitMessage() {
   return {
@@ -217,7 +217,7 @@ function generateTensDigitMessage() {
 }
 
 /**
- * 步驟七-2：選擇總需求人數【個位數】（固定 0~9 共 10 個按鈕）
+ * 步驟七-2：選擇總需求人數【個位數】
  */
 function generateUnitsDigitMessage(tens) {
   const items = [];
@@ -270,12 +270,11 @@ function generateConfirmTotalMessage(total) {
 }
 
 /**
- * 步驟八：選擇目前已有幾人（最多 13 個按鈕，且不超過總需求人數）
+ * 步驟八：選擇目前已有幾人（防呆限制最高只能選到 總需求 - 1）
  */
 function generateCurrentCountMessage(totalCapacity) {
   const items = [];
-  // 限制最高 13 個按鈕，且不能超過總需求人數
-  const maxLimit = Math.min(totalCapacity, 12);
+  const maxLimit = Math.min(totalCapacity - 1, 12);
 
   for (let i = 0; i <= maxLimit; i++) {
     items.push({
@@ -290,13 +289,13 @@ function generateCurrentCountMessage(totalCapacity) {
 
   return {
     type: "text",
-    text: `總需求 ${totalCapacity} 人，請問『目前已經有幾位』了？請點選下方按鈕：`,
+    text: `總需求 ${totalCapacity} 人（您已算在內），請問『目前除了您以外還有幾位』？請點選下方按鈕：`,
     quickReply: { items },
   };
 }
 
 /**
- * 產生最終揪團成功的卡片
+ * 產生最終揪團成功的卡片（使用嚴格型別判定 0）
  */
 function generateCreateEventFlex(eventData = {}) {
   const emoji = eventData.emoji || "🏸";
@@ -306,8 +305,13 @@ function generateCreateEventFlex(eventData = {}) {
   const locationName = eventData.locationName || "綜合運動中心";
   const regionLabel = eventData.regionLabel || "北 (北北基)";
 
-  const currentCount = parseInt(eventData.currentCount) || 1;
-  const totalCapacity = parseInt(eventData.totalCapacity) || 4;
+  const currentCount = Number.isInteger(eventData.currentCount)
+    ? eventData.currentCount
+    : 0;
+  const totalCapacity =
+    eventData.totalCapacity !== undefined && eventData.totalCapacity !== null
+      ? parseInt(eventData.totalCapacity)
+      : 4;
 
   const percentage = Math.min(
     Math.round((currentCount / totalCapacity) * 100),

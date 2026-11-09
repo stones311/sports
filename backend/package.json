@@ -10,6 +10,6 @@
   },
   "scripts": {
     "start": "node server.js",
-    "dev": "concurrently \"node server.js\" \"ngrok http --domain=composed-afford-uncharted.ngrok-free.dev 3000\""
+    "dev": "concurrently \"node server.js\" \"ngrok http --url=composed-afford-uncharted.ngrok-free.dev 3000\""
   }
 }

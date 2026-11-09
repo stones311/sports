@@ -148,11 +148,19 @@ app.post("/webhook", async function (req, res) {
             });
           }
         }
-        // 接收目前已有幾位，完成所有流程並產生成立卡片
+        // 接收目前已有幾位（加入除錯 Log）
         else if (userText.startsWith("目前人數 ")) {
           const session = userSessions[userId];
           if (session && session.step === "select_current_count") {
-            session.currentCount = parseInt(userText.replace("目前人數 ", ""));
+            console.log("🐞 收到目前人數原始文字：", JSON.stringify(userText));
+
+            const rawCount = userText.replace("目前人數 ", "").trim();
+            session.currentCount = rawCount === "" ? 0 : parseInt(rawCount, 10);
+
+            console.log(
+              "🐞 解析後的 currentCount 數值：",
+              session.currentCount,
+            );
 
             const emojiMap = {
               羽球: "🏸",
