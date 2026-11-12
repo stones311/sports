@@ -14,6 +14,9 @@ const {
   generateConfirmTotalMessage,
   generateCurrentCountMessage,
   generateCreateEventFlex,
+  generateSearchSportMessage,
+  generateSearchLocationRequestMessage,
+  generateNearbyVenuesFlex,
 } = require("./linebot");
 
 const app = express();
@@ -57,7 +60,22 @@ app.post("/webhook", async function (req, res) {
             replyToken: event.replyToken,
             messages: [msg],
           });
-        } else if (userText.startsWith("我要揪團 運動:")) {
+        } else if (userText === "找場地" || userText === "附近場地") {
+        userSessions[userId] = { step: "search_select_sport" };
+        const msg = generateSearchSportMessage();
+        await client.replyMessage({
+          replyToken: event.replyToken,
+          messages: [msg],
+        });
+       } else if (userText.startsWith("找場地 運動:")) {
+        const sport = userText.split("運動:")[1];
+        userSessions[userId] = { step: "search_get_location", sport };
+        const msg = generateSearchLocationRequestMessage(sport);
+        await client.replyMessage({
+          replyToken: event.replyToken,
+          messages: [msg],
+        });
+      } else if (userText.startsWith("我要揪團 運動:")) {
           const sport = userText.split("運動:")[1];
           userSessions[userId] = { step: "select_date", sport };
           const msg = generateDatePickerMessage(sport);
@@ -238,7 +256,59 @@ app.post("/webhook", async function (req, res) {
         event.message.type === "location"
       ) {
         const session = userSessions[userId];
-        if (session && session.step === "get_location") {
+
+        // 處理「找場地」的位置搜尋
+        if (session && session.step === "search_get_location") {
+          const lat = event.message.latitude;
+          const lng = event.message.longitude;
+          const sport = session.sport;
+
+          try {
+            const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+            const keyword = `${sport}場`;
+            const mapsUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=3000&keyword=${encodeURIComponent(keyword)}&language=zh-TW&key=${apiKey}`;
+
+            const response = await axios.get(mapsUrl);
+            const results = response.data.results;
+
+            if (!results || results.length === 0) {
+              await client.replyMessage({
+                replyToken: event.replyToken,
+                messages: [
+                  {
+                    type: "text",
+                    text: `附近 3 公里內暫時找不到相關的${sport}場地 😅`,
+                  },
+                ],
+              });
+            } else {
+              const venues = results.map((item) => ({
+                name: item.name,
+                address: item.vicinity || "地址請見地圖",
+                place_id: item.place_id,
+              }));
+
+              const flexMsg = generateNearbyVenuesFlex(venues, sport);
+              await client.replyMessage({
+                replyToken: event.replyToken,
+                messages: [flexMsg],
+              });
+            }
+            delete userSessions[userId];
+          } catch (error) {
+            console.error("Google Places API 查詢失敗：", error.message);
+            await client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [
+                {
+                  type: "text",
+                  text: "抱歉，搜尋附近場地時發生錯誤，請稍後再試。",
+                },
+              ],
+            });
+          }
+        }
+        else if (session && session.step === "get_location") {
           const lat = event.message.latitude;
           const lng = event.message.longitude;
           const sport = session.sport;
