@@ -61,21 +61,21 @@ app.post("/webhook", async function (req, res) {
             messages: [msg],
           });
         } else if (userText === "找場地" || userText === "附近場地") {
-        userSessions[userId] = { step: "search_select_sport" };
-        const msg = generateSearchSportMessage();
-        await client.replyMessage({
-          replyToken: event.replyToken,
-          messages: [msg],
-        });
-       } else if (userText.startsWith("找場地 運動:")) {
-        const sport = userText.split("運動:")[1];
-        userSessions[userId] = { step: "search_get_location", sport };
-        const msg = generateSearchLocationRequestMessage(sport);
-        await client.replyMessage({
-          replyToken: event.replyToken,
-          messages: [msg],
-        });
-      } else if (userText.startsWith("我要揪團 運動:")) {
+          userSessions[userId] = { step: "search_select_sport" };
+          const msg = generateSearchSportMessage();
+          await client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [msg],
+          });
+        } else if (userText.startsWith("找場地 運動:")) {
+          const sport = userText.split("運動:")[1];
+          userSessions[userId] = { step: "search_get_location", sport };
+          const msg = generateSearchLocationRequestMessage(sport);
+          await client.replyMessage({
+            replyToken: event.replyToken,
+            messages: [msg],
+          });
+        } else if (userText.startsWith("我要揪團 運動:")) {
           const sport = userText.split("運動:")[1];
           userSessions[userId] = { step: "select_date", sport };
           const msg = generateDatePickerMessage(sport);
@@ -166,19 +166,12 @@ app.post("/webhook", async function (req, res) {
             });
           }
         }
-        // 接收目前已有幾位（加入除錯 Log）
+        // 接收目前已有幾位
         else if (userText.startsWith("目前人數 ")) {
           const session = userSessions[userId];
           if (session && session.step === "select_current_count") {
-            console.log("🐞 收到目前人數原始文字：", JSON.stringify(userText));
-
             const rawCount = userText.replace("目前人數 ", "").trim();
             session.currentCount = rawCount === "" ? 0 : parseInt(rawCount, 10);
-
-            console.log(
-              "🐞 解析後的 currentCount 數值：",
-              session.currentCount,
-            );
 
             const emojiMap = {
               羽球: "🏸",
@@ -256,13 +249,59 @@ app.post("/webhook", async function (req, res) {
         event.message.type === "location"
       ) {
         const session = userSessions[userId];
+        if (!session) {
+          return res.status(200).send("OK");
+        }
 
-        // 處理「找場地」的位置搜尋
-        if (session && session.step === "search_get_location") {
-          const lat = event.message.latitude;
-          const lng = event.message.longitude;
-          const sport = session.sport;
+        const lat = event.message.latitude;
+        const lng = event.message.longitude;
+        const sport = session.sport;
 
+        // 1. 處理「我要揪團」的場地搜尋
+        if (session.step === "get_location") {
+          try {
+            const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+            const keyword = `${sport}場`;
+            const mapsUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=5000&keyword=${encodeURIComponent(keyword)}&key=${apiKey}`;
+
+            const response = await axios.get(mapsUrl);
+            const results = response.data.results;
+
+            let venues = [];
+            if (results && results.length > 0) {
+              venues = results.map((item) => ({ name: item.name }));
+            } else {
+              const fallbackUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=8000&keyword=${encodeURIComponent("運動中心")}&key=${apiKey}`;
+              const fallbackRes = await axios.get(fallbackUrl);
+              venues = fallbackRes.data.results.map((item) => ({
+                name: item.name,
+              }));
+            }
+
+            if (venues.length === 0) {
+              venues = [{ name: "附近運動中心" }];
+            }
+
+            const msg = generateNearbyLocationsMessage(venues);
+            await client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [msg],
+            });
+          } catch (error) {
+            console.error("Google Maps API 查詢失敗：", error.message);
+            await client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [
+                {
+                  type: "text",
+                  text: "抱歉，尋找附近場地時發生錯誤，請直接手動輸入場地名稱：",
+                },
+              ],
+            });
+          }
+        }
+        // 2. 處理「純找場地」的搜尋
+        else if (session.step === "search_get_location") {
           try {
             const apiKey = process.env.GOOGLE_MAPS_API_KEY;
             const keyword = `${sport}場`;
@@ -303,52 +342,6 @@ app.post("/webhook", async function (req, res) {
                 {
                   type: "text",
                   text: "抱歉，搜尋附近場地時發生錯誤，請稍後再試。",
-                },
-              ],
-            });
-          }
-        }
-        else if (session && session.step === "get_location") {
-          const lat = event.message.latitude;
-          const lng = event.message.longitude;
-          const sport = session.sport;
-
-          try {
-            const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-            const keyword = `${sport}場`;
-            const mapsUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=5000&keyword=${encodeURIComponent(keyword)}&key=${apiKey}`;
-
-            const response = await axios.get(mapsUrl);
-            const results = response.data.results;
-
-            let venues = [];
-            if (results && results.length > 0) {
-              venues = results.map((item) => ({ name: item.name }));
-            } else {
-              const fallbackUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=8000&keyword=${encodeURIComponent("運動中心")}&key=${apiKey}`;
-              const fallbackRes = await axios.get(fallbackUrl);
-              venues = fallbackRes.data.results.map((item) => ({
-                name: item.name,
-              }));
-            }
-
-            if (venues.length === 0) {
-              venues = [{ name: "附近運動中心" }];
-            }
-
-            const msg = generateNearbyLocationsMessage(venues);
-            await client.replyMessage({
-              replyToken: event.replyToken,
-              messages: [msg],
-            });
-          } catch (error) {
-            console.error("Google Maps API 查詢失敗：", error.message);
-            await client.replyMessage({
-              replyToken: event.replyToken,
-              messages: [
-                {
-                  type: "text",
-                  text: "抱歉，尋找附近場地時發生錯誤，請直接手動輸入場地名稱：",
                 },
               ],
             });
