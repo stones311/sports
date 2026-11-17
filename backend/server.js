@@ -9,9 +9,7 @@ const {
   generateLocationRequestMessage,
   generateNearbyLocationsMessage,
   generateHostChoiceMessage,
-  generateTensDigitMessage,
-  generateUnitsDigitMessage,
-  generateConfirmTotalMessage,
+  generateTotalCapacityMessage,
   generateCurrentCountMessage,
   generateCreateEventFlex,
   generateSearchSportMessage,
@@ -97,69 +95,29 @@ app.post("/webhook", async function (req, res) {
             });
           }
         }
-        // 接收地區身分，進入「選擇十位數」
+        // 接收地區身分，直接進入「選擇 1~13 總人數」
         else if (userText.startsWith("設定地區 ")) {
           const session = userSessions[userId];
           if (session && session.step === "select_host_region") {
             session.regionLabel = userText.replace("設定地區 ", "");
-            session.step = "select_tens_digit";
+            session.step = "select_total_capacity";
 
-            const msg = generateTensDigitMessage();
+            const msg = generateTotalCapacityMessage();
             await client.replyMessage({
               replyToken: event.replyToken,
               messages: [msg],
             });
           }
         }
-        // 接收十位數，進入「選擇個位數」
-        else if (userText.startsWith("十位數 ")) {
+        // 接收選擇好的總人數（1 ~ 13 人），直接進入「選擇目前已有幾人」
+        else if (userText.startsWith("總人數 ")) {
           const session = userSessions[userId];
-          if (session && session.step === "select_tens_digit") {
-            session.tempTens = parseInt(userText.replace("十位數 ", ""));
-            session.step = "select_units_digit";
-
-            const msg = generateUnitsDigitMessage(session.tempTens);
-            await client.replyMessage({
-              replyToken: event.replyToken,
-              messages: [msg],
-            });
-          }
-        }
-        // 接收個位數，組合並讓使用者確認
-        else if (userText.startsWith("個位數 ")) {
-          const session = userSessions[userId];
-          if (session && session.step === "select_units_digit") {
-            const units = parseInt(userText.replace("個位數 ", ""));
-            session.totalCapacity = session.tempTens * 10 + units;
-
-            if (session.totalCapacity <= 0) session.totalCapacity = 4; // 防呆預設
-
-            session.step = "confirm_total";
-
-            const msg = generateConfirmTotalMessage(session.totalCapacity);
-            await client.replyMessage({
-              replyToken: event.replyToken,
-              messages: [msg],
-            });
-          }
-        }
-        // 確認總人數結果
-        else if (userText === "確認總人數 正確") {
-          const session = userSessions[userId];
-          if (session && session.step === "confirm_total") {
+          if (session && session.step === "select_total_capacity") {
+            const capacity = parseInt(userText.replace("總人數 ", ""), 10);
+            session.totalCapacity = isNaN(capacity) ? 4 : capacity;
             session.step = "select_current_count";
 
             const msg = generateCurrentCountMessage(session.totalCapacity);
-            await client.replyMessage({
-              replyToken: event.replyToken,
-              messages: [msg],
-            });
-          }
-        } else if (userText === "重新選擇總人數") {
-          const session = userSessions[userId];
-          if (session) {
-            session.step = "select_tens_digit";
-            const msg = generateTensDigitMessage();
             await client.replyMessage({
               replyToken: event.replyToken,
               messages: [msg],

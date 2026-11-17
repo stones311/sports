@@ -191,81 +191,25 @@ function generateHostChoiceMessage(locationName) {
 }
 
 /**
- * 步驟七-1：選擇總需求人數【十位數】
+ * 步驟七：直接選擇總需求人數（1 ~ 13 人）
  */
-function generateTensDigitMessage() {
-  return {
-    type: "text",
-    text: "👥 【設定總需求人數】\n請先選擇【十位數】：",
-    quickReply: {
-      items: [
-        {
-          type: "action",
-          action: { type: "message", label: "0 (0 ~ 9 人)", text: "十位數 0" },
-        },
-        {
-          type: "action",
-          action: {
-            type: "message",
-            label: "1 (10 ~ 19 人)",
-            text: "十位數 1",
-          },
-        },
-      ],
-    },
-  };
-}
-
-/**
- * 步驟七-2：選擇總需求人數【個位數】
- */
-function generateUnitsDigitMessage(tens) {
+function generateTotalCapacityMessage() {
   const items = [];
-  for (let i = 0; i <= 9; i++) {
+  for (let i = 1; i <= 13; i++) {
     items.push({
       type: "action",
       action: {
         type: "message",
         label: `${i} 人`,
-        text: `個位數 ${i}`,
+        text: `總人數 ${i}`,
       },
     });
   }
 
   return {
     type: "text",
-    text: `已選擇十位數：${tens * 10}\n請選擇【個位數】：`,
+    text: "👥 【設定總需求人數】\n請直接選擇這次活動需要的總人數（1 ~ 13 人）：",
     quickReply: { items },
-  };
-}
-
-/**
- * 步驟七-3：總需求人數確認
- */
-function generateConfirmTotalMessage(total) {
-  return {
-    type: "text",
-    text: `您設定的總需求人數為：【 ${total} 人 】\n請問正確嗎？`,
-    quickReply: {
-      items: [
-        {
-          type: "action",
-          action: {
-            type: "message",
-            label: "✅ 正確，下一步",
-            text: "確認總人數 正確",
-          },
-        },
-        {
-          type: "action",
-          action: {
-            type: "message",
-            label: "🔄 重新選擇",
-            text: "重新選擇總人數",
-          },
-        },
-      ],
-    },
   };
 }
 
@@ -628,9 +572,7 @@ module.exports = {
   generateLocationRequestMessage,
   generateNearbyLocationsMessage,
   generateHostChoiceMessage,
-  generateTensDigitMessage,
-  generateUnitsDigitMessage,
-  generateConfirmTotalMessage,
+  generateTotalCapacityMessage,
   generateCurrentCountMessage,
   generateCreateEventFlex,
   generateSearchSportMessage,
